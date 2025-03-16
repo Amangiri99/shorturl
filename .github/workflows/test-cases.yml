@@ -1,0 +1,43 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    types: [ "edited", "opened", "synchronize"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.12]
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: "pipenv"  # Caches dependencies
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+        pipenv install --deploy --dev  # Ensure prod-ready dependencies
+
+    - name: Run Migrations (if needed)
+      run: |
+        pipenv run python manage.py migrate  # Apply migrations
+      env:
+        DJANGO_SETTINGS_MODULE: "short_url.settings"
+
+    - name: Run Tests
+      run: |
+        pipenv run python manage.py test
+      env:
+        DJANGO_SETTINGS_MODULE: "short_url.settings"
